@@ -155,6 +155,70 @@ class TenantDestination(models.Model):
         ordering = ['sort_order', 'created_at']
 
 
+class PlatformType(models.TextChoices):
+    TWITCH = 'twitch', 'Twitch'
+    YOUTUBE = 'youtube', 'YouTube'
+    FACEBOOK = 'facebook', 'Facebook'
+    CUSTOM_RTMP = 'custom_rtmp', 'Custom RTMP'
+
+
+class ConnectionStatus(models.TextChoices):
+    CONNECTED = 'connected', 'Connected'
+    DISCONNECTED = 'disconnected', 'Disconnected'
+    AUTH_EXPIRED = 'auth_expired', 'Auth Expired'
+    CONNECTING = 'connecting', 'Connecting'
+    STREAMING = 'streaming', 'Streaming'
+    ERROR = 'error', 'Error'
+
+
+class PlatformConnection(models.Model):
+    """OAuth-backed streaming platform connection for a tenant."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenant = models.ForeignKey(
+        Tenant,
+        on_delete=models.CASCADE,
+        related_name='platform_connections',
+    )
+    platform = models.CharField(max_length=32, choices=PlatformType.choices)
+    name = models.CharField(max_length=255)
+    status = models.CharField(
+        max_length=32,
+        choices=ConnectionStatus.choices,
+        default=ConnectionStatus.CONNECTING,
+    )
+    platform_user_id = models.CharField(max_length=128, blank=True, default='')
+    platform_login = models.CharField(max_length=128, blank=True, default='')
+    access_token_encrypted = models.TextField(blank=True, default='')
+    refresh_token_encrypted = models.TextField(blank=True, default='')
+    token_expires_at = models.DateTimeField(null=True, blank=True)
+    stream_key_encrypted = models.TextField(blank=True, default='')
+    destination = models.ForeignKey(
+        TenantDestination,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='platform_connections',
+    )
+    metadata = models.JSONField(default=dict, blank=True)
+    sort_order = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'platform_connections'
+        ordering = ['sort_order', 'created_at']
+        indexes = [
+            models.Index(fields=['tenant', 'platform']),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['tenant', 'platform'],
+                name='unique_tenant_platform_connection',
+            ),
+        ]
+
+
 class StudioMediaAsset(models.Model):
     """
     Studio graphics material (background, overlay, logo, QR, green screen).

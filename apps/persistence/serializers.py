@@ -7,6 +7,7 @@ from apps.persistence.constants import (
 )
 from apps.persistence.models import (
     LayoutType,
+    PlatformConnection,
     SceneType,
     TenantBannerMaterial,
     TenantDestination,
@@ -295,3 +296,37 @@ class TickerMaterialSerializer(serializers.ModelSerializer):
         from apps.persistence.text_material_service import TextMaterialService
 
         return TextMaterialService.ticker_graphic_from_material(obj)
+
+
+class PlatformConnectionSerializer(serializers.ModelSerializer):
+    connection_id = serializers.UUIDField(source='id', read_only=True)
+    tenant_id = serializers.UUIDField(read_only=True)
+    destination_id = serializers.UUIDField(read_only=True, allow_null=True)
+    has_stream_key = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PlatformConnection
+        fields = [
+            'connection_id',
+            'tenant_id',
+            'platform',
+            'name',
+            'status',
+            'platform_user_id',
+            'platform_login',
+            'destination_id',
+            'has_stream_key',
+            'metadata',
+            'sort_order',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = fields
+
+    def get_has_stream_key(self, obj: PlatformConnection) -> bool:
+        return bool(obj.stream_key_encrypted)
+
+
+class TwitchAuthorizeQuerySerializer(serializers.Serializer):
+    tenant_id = serializers.UUIDField()
+    return_url = serializers.URLField(required=False, allow_blank=True, default='')

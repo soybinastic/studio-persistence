@@ -1,3 +1,5 @@
+from django.conf import settings
+from django.shortcuts import redirect
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -7,6 +9,9 @@ from apps.persistence.exceptions import (
     BannerMaterialNotFoundError,
     DestinationNotFoundError,
     InvalidCountdownTargetError,
+    OAuthStateError,
+    PlatformConnectionNotFoundError,
+    PlatformIntegrationError,
     SceneNotFoundError,
     TenantNotFoundError,
     TickerMaterialNotFoundError,
@@ -24,8 +29,11 @@ from apps.persistence.serializers import (
     UpdateDestinationSerializer,
     UpdateSceneSerializer,
     UpdateTickerMaterialSerializer,
+    PlatformConnectionSerializer,
+    TwitchAuthorizeQuerySerializer,
 )
 from apps.persistence.asset_service import AssetCatalogService
+from apps.persistence.platform_connection_service import PlatformConnectionService
 from apps.persistence.services import TenantService
 from apps.persistence.text_material_service import TextMaterialService
 
@@ -36,6 +44,10 @@ def _tenant_service() -> TenantService:
 
 def _text_material_service() -> TextMaterialService:
     return TextMaterialService()
+
+
+def _platform_connection_service() -> PlatformConnectionService:
+    return PlatformConnectionService()
 
 
 def _serialize_scene(scene, tenant) -> dict:
@@ -466,3 +478,156 @@ class TenantTickerMaterialDetailView(APIView):
             )
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class TenantPlatformConnectionListView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request, tenant_id):
+        try:
+            connections = _platform_connection_service().list_connections(tenant_id)
+        except TenantNotFoundError:
+            return Response({'detail': 'Tenant not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response(PlatformConnectionSerializer(connections, many=True).data)
+
+
+class TenantPlatformConnectionDetailView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def delete(self, request, tenant_id, connection_id):
+        try:
+            _platform_connection_service().delete_connection(tenant_id, connection_id)
+        except TenantNotFoundError:
+            return Response({'detail': 'Tenant not found'}, status=status.HTTP_404_NOT_FOUND)
+        except PlatformConnectionNotFoundError:
+            return Response(
+                {'detail': 'Platform connection not found'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class TenantPlatformConnectionDisconnectView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def post(self, request, tenant_id, connection_id):
+        try:
+            connection = _platform_connection_service().disconnect_connection(
+                tenant_id,
+                connection_id,
+            )
+        except TenantNotFoundError:
+            return Response({'detail': 'Tenant not found'}, status=status.HTTP_404_NOT_FOUND)
+        except PlatformConnectionNotFoundError:
+            return Response(
+                {'detail': 'Platform connection not found'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        return Response(PlatformConnectionSerializer(connection).data)
+
+
+class TenantPlatformConnectionRefreshView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def post(self, request, tenant_id, connection_id):
+        try:
+            connection = _platform_connection_service().refresh_twitch_stream_key(
+                tenant_id,
+                connection_id,
+            )
+        except TenantNotFoundError:
+            return Response({'detail': 'Tenant not found'}, status=status.HTTP_404_NOT_FOUND)
+        except PlatformConnectionNotFoundError:
+            return Response(
+                {'detail': 'Platform connection not found'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        except PlatformIntegrationError as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(PlatformConnectionSerializer(connection).data)
+
+
+class TwitchChatCredentialsView(APIView):
+    """Internal endpoint for compositor to fetch Twitch IRC credentials."""
+
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request, tenant_id):
+        try:
+            credentials = _platform_connection_service().get_twitch_chat_credentials(tenant_id)
+        except TenantNotFoundError:
+            return Response({'detail': 'Tenant not found'}, status=status.HTTP_404_NOT_FOUND)
+        except PlatformConnectionNotFoundError:
+            return Response(
+                {'detail': 'Twitch connection not found'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        except PlatformIntegrationError as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+        return Response(credentials)
+
+
+class TwitchAuthorizeView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request):
+        serializer = TwitchAuthorizeQuerySerializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        try:
+            authorize_url = _platform_connection_service().build_twitch_authorize_url(
+                data['tenant_id'],
+                return_url=data.get('return_url') or '',
+            )
+        except TenantNotFoundError:
+            return Response({'detail': 'Tenant not found'}, status=status.HTTP_404_NOT_FOUND)
+        except PlatformIntegrationError as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+        return Response({'authorize_url': authorize_url})
+
+
+class TwitchOAuthCallbackView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request):
+        error = request.query_params.get('error')
+        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:5173')
+
+        if error:
+            description = request.query_params.get('error_description', error)
+            return redirect(f'{frontend_url}?twitch=error&message={description}')
+
+        code = request.query_params.get('code')
+        state = request.query_params.get('state')
+        if not code or not state:
+            return redirect(f'{frontend_url}?twitch=error&message=Missing+OAuth+parameters')
+
+        try:
+            connection, return_url = _platform_connection_service().complete_twitch_oauth(
+                code=code,
+                state=state,
+            )
+        except OAuthStateError as exc:
+            return redirect(f'{frontend_url}?twitch=error&message={exc}')
+        except PlatformIntegrationError as exc:
+            return redirect(f'{frontend_url}?twitch=error&message={exc}')
+
+        target = return_url or frontend_url
+        separator = '&' if '?' in target else '?'
+        return redirect(
+            f'{target}{separator}twitch=connected&connection_id={connection.id}&platform=twitch',
+        )

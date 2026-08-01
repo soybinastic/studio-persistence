@@ -1,6 +1,7 @@
 from django.contrib import admin
 
 from apps.persistence.models import (
+    PlatformConnection,
     StudioMediaAsset,
     Tenant,
     TenantBannerMaterial,
@@ -77,3 +78,24 @@ class TenantTickerMaterialAdmin(admin.ModelAdmin):
     )
     list_filter = ('ticker_position', 'is_system_default', 'is_active')
     search_fields = ('label', 'ticker_text')
+
+
+@admin.register(PlatformConnection)
+class PlatformConnectionAdmin(admin.ModelAdmin):
+    list_display = (
+        'name',
+        'tenant',
+        'platform',
+        'status',
+        'platform_login',
+        'updated_at',
+    )
+    list_filter = ('platform', 'status')
+    search_fields = ('name', 'platform_login', 'platform_user_id')
+    readonly_fields = (
+        'access_token_encrypted',
+        'refresh_token_encrypted',
+        'stream_key_encrypted',
+        'created_at',
+        'updated_at',
+    )
