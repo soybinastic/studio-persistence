@@ -153,3 +153,131 @@ class TenantDestination(models.Model):
     class Meta:
         db_table = 'tenant_destinations'
         ordering = ['sort_order', 'created_at']
+
+
+class StudioMediaAsset(models.Model):
+    """
+    Studio graphics material (background, overlay, logo, QR, green screen).
+
+    tenant=NULL rows are system defaults available to every tenant.
+    tenant=<uuid> rows are tenant-owned uploads or custom materials.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenant = models.ForeignKey(
+        Tenant,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='media_assets',
+    )
+    asset_type = models.PositiveSmallIntegerField()
+    source = models.CharField(max_length=2048)
+    thumbnail = models.CharField(max_length=2048, blank=True, default='')
+    size = models.BigIntegerField(default=0)
+    media_format = models.CharField(max_length=16, default='image')
+    label = models.CharField(max_length=255, blank=True, default='')
+    is_system_default = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+    meta_data = models.JSONField(default=dict, blank=True)
+    sort_order = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'studio_media_assets'
+        ordering = ['asset_type', 'sort_order', 'created_at']
+        indexes = [
+            models.Index(fields=['tenant', 'asset_type']),
+            models.Index(fields=['asset_type', 'is_system_default']),
+        ]
+
+    def __str__(self) -> str:
+        scope = 'system' if self.tenant_id is None else str(self.tenant_id)
+        return f'{scope}:{self.asset_type}:{self.id}'
+
+
+class TenantBannerMaterial(models.Model):
+    """
+    Saved banner lower-third template for a tenant graphics panel.
+
+    tenant=NULL rows are system defaults available to every tenant.
+    tenant=<uuid> rows are tenant-created banner materials.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenant = models.ForeignKey(
+        Tenant,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='banner_materials',
+    )
+    label = models.CharField(max_length=255, blank=True, default='')
+    title = models.CharField(max_length=255, blank=True, default='')
+    description = models.CharField(max_length=512, blank=True, default='')
+    theme = models.CharField(max_length=32, default='classic')
+    primary = models.CharField(max_length=32, default='#111111')
+    secondary = models.CharField(max_length=32, default='#374151')
+    accent = models.CharField(max_length=32, default='#38bdf8')
+    font_size = models.PositiveSmallIntegerField(default=32)
+    is_display_names = models.BooleanField(default=True)
+    is_system_default = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+    sort_order = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'tenant_banner_materials'
+        ordering = ['sort_order', 'created_at']
+        indexes = [
+            models.Index(fields=['tenant', 'is_active']),
+            models.Index(fields=['is_system_default']),
+        ]
+
+    def __str__(self) -> str:
+        scope = 'system' if self.tenant_id is None else str(self.tenant_id)
+        return f'{scope}:banner:{self.label or self.title or self.id}'
+
+
+class TenantTickerMaterial(models.Model):
+    """
+    Saved scrolling ticker template for a tenant graphics panel.
+
+    tenant=NULL rows are system defaults available to every tenant.
+    tenant=<uuid> rows are tenant-created ticker materials.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenant = models.ForeignKey(
+        Tenant,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='ticker_materials',
+    )
+    label = models.CharField(max_length=255, blank=True, default='')
+    ticker_text = models.TextField(blank=True, default='')
+    ticker_position = models.CharField(max_length=16, default='bottom')
+    ticker_direction = models.CharField(max_length=8, default='rtl')
+    ticker_speed = models.FloatField(default=2.0)
+    primary = models.CharField(max_length=32, default='#111827')
+    secondary = models.CharField(max_length=32, default='#ffffff')
+    is_system_default = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+    sort_order = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'tenant_ticker_materials'
+        ordering = ['sort_order', 'created_at']
+        indexes = [
+            models.Index(fields=['tenant', 'is_active']),
+            models.Index(fields=['is_system_default']),
+        ]
+
+    def __str__(self) -> str:
+        scope = 'system' if self.tenant_id is None else str(self.tenant_id)
+        return f'{scope}:ticker:{self.label or self.id}'

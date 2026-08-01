@@ -1,12 +1,18 @@
 from django.urls import path
 
 from apps.persistence.views import (
+    TenantAssetCatalogView,
+    TenantBannerMaterialDetailView,
+    TenantBannerMaterialListCreateView,
     TenantBootstrapView,
     TenantConfigurationView,
     TenantDestinationDetailView,
     TenantDestinationListCreateView,
     TenantSceneDetailView,
     TenantSceneListCreateView,
+    TenantTextMaterialCatalogView,
+    TenantTickerMaterialDetailView,
+    TenantTickerMaterialListCreateView,
 )
 
 urlpatterns = [
@@ -35,5 +41,35 @@ urlpatterns = [
         'tenant/<uuid:tenant_id>/destinations/<uuid:destination_id>/',
         TenantDestinationDetailView.as_view(),
         name='tenant-destination-detail',
+    ),
+    path(
+        'tenant/<uuid:tenant_id>/assets/',
+        TenantAssetCatalogView.as_view(),
+        name='tenant-assets',
+    ),
+    path(
+        'tenant/<uuid:tenant_id>/text-materials/',
+        TenantTextMaterialCatalogView.as_view(),
+        name='tenant-text-materials',
+    ),
+    path(
+        'tenant/<uuid:tenant_id>/banners/',
+        TenantBannerMaterialListCreateView.as_view(),
+        name='tenant-banners',
+    ),
+    path(
+        'tenant/<uuid:tenant_id>/banners/<uuid:banner_id>/',
+        TenantBannerMaterialDetailView.as_view(),
+        name='tenant-banner-detail',
+    ),
+    path(
+        'tenant/<uuid:tenant_id>/tickers/',
+        TenantTickerMaterialListCreateView.as_view(),
+        name='tenant-tickers',
+    ),
+    path(
+        'tenant/<uuid:tenant_id>/tickers/<uuid:ticker_id>/',
+        TenantTickerMaterialDetailView.as_view(),
+        name='tenant-ticker-detail',
     ),
 ]

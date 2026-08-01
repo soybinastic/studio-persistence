@@ -4,26 +4,38 @@ from rest_framework.views import APIView
 
 from apps.persistence.exceptions import (
     ActiveSceneDeleteError,
+    BannerMaterialNotFoundError,
     DestinationNotFoundError,
     InvalidCountdownTargetError,
     SceneNotFoundError,
     TenantNotFoundError,
+    TickerMaterialNotFoundError,
 )
 from apps.persistence.serializers import (
+    CreateBannerMaterialSerializer,
     CreateDestinationSerializer,
     CreateSceneSerializer,
+    CreateTickerMaterialSerializer,
     DestinationSerializer,
     SceneSerializer,
     TenantBootstrapSerializer,
+    UpdateBannerMaterialSerializer,
     UpdateConfigurationSerializer,
     UpdateDestinationSerializer,
     UpdateSceneSerializer,
+    UpdateTickerMaterialSerializer,
 )
+from apps.persistence.asset_service import AssetCatalogService
 from apps.persistence.services import TenantService
+from apps.persistence.text_material_service import TextMaterialService
 
 
 def _tenant_service() -> TenantService:
     return TenantService()
+
+
+def _text_material_service() -> TextMaterialService:
+    return TextMaterialService()
 
 
 def _serialize_scene(scene, tenant) -> dict:
@@ -258,6 +270,198 @@ class TenantDestinationDetailView(APIView):
         except DestinationNotFoundError:
             return Response(
                 {'detail': 'Destination not found'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class TenantAssetCatalogView(APIView):
+    """List studio media assets available to a tenant (system defaults + tenant uploads)."""
+
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request, tenant_id):
+        try:
+            catalog = AssetCatalogService().build_asset_catalog(tenant_id)
+        except TenantNotFoundError:
+            return Response({'detail': 'Tenant not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response(catalog)
+
+
+class TenantTextMaterialCatalogView(APIView):
+    """List banner and ticker materials available to a tenant."""
+
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request, tenant_id):
+        try:
+            catalog = _text_material_service().build_text_material_catalog(tenant_id)
+        except TenantNotFoundError:
+            return Response({'detail': 'Tenant not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response(catalog)
+
+
+class TenantBannerMaterialListCreateView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request, tenant_id):
+        try:
+            banners = _text_material_service().list_banners_for_tenant(tenant_id)
+        except TenantNotFoundError:
+            return Response({'detail': 'Tenant not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response(
+            [
+                _text_material_service().serialize_banner_material(banner)
+                for banner in banners
+            ]
+        )
+
+    def post(self, request, tenant_id):
+        serializer = CreateBannerMaterialSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        try:
+            banner = _text_material_service().create_banner_material(
+                tenant_id,
+                label=data.get('label', ''),
+                title=data['title'],
+                description=data.get('description', ''),
+                theme=data.get('theme', 'classic'),
+                primary=data.get('primary', '#111111'),
+                secondary=data.get('secondary', '#374151'),
+                accent=data.get('accent', '#38bdf8'),
+                font_size=data.get('font_size', 32),
+                is_display_names=data.get('is_display_names', True),
+            )
+        except TenantNotFoundError:
+            return Response({'detail': 'Tenant not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response(
+            _text_material_service().serialize_banner_material(banner),
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class TenantBannerMaterialDetailView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def patch(self, request, tenant_id, banner_id):
+        serializer = UpdateBannerMaterialSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            banner = _text_material_service().update_banner_material(
+                tenant_id,
+                banner_id,
+                **serializer.validated_data,
+            )
+        except TenantNotFoundError:
+            return Response({'detail': 'Tenant not found'}, status=status.HTTP_404_NOT_FOUND)
+        except BannerMaterialNotFoundError:
+            return Response(
+                {'detail': 'Banner material not found'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        return Response(_text_material_service().serialize_banner_material(banner))
+
+    def delete(self, request, tenant_id, banner_id):
+        try:
+            _text_material_service().delete_banner_material(tenant_id, banner_id)
+        except TenantNotFoundError:
+            return Response({'detail': 'Tenant not found'}, status=status.HTTP_404_NOT_FOUND)
+        except BannerMaterialNotFoundError:
+            return Response(
+                {'detail': 'Banner material not found'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class TenantTickerMaterialListCreateView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request, tenant_id):
+        try:
+            tickers = _text_material_service().list_tickers_for_tenant(tenant_id)
+        except TenantNotFoundError:
+            return Response({'detail': 'Tenant not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response(
+            [
+                _text_material_service().serialize_ticker_material(ticker)
+                for ticker in tickers
+            ]
+        )
+
+    def post(self, request, tenant_id):
+        serializer = CreateTickerMaterialSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        try:
+            ticker = _text_material_service().create_ticker_material(
+                tenant_id,
+                label=data.get('label', ''),
+                ticker_text=data['ticker_text'],
+                ticker_position=data.get('ticker_position', 'bottom'),
+                ticker_direction=data.get('ticker_direction', 'rtl'),
+                ticker_speed=data.get('ticker_speed', 2.0),
+                primary=data.get('primary', '#111827'),
+                secondary=data.get('secondary', '#ffffff'),
+            )
+        except TenantNotFoundError:
+            return Response({'detail': 'Tenant not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response(
+            _text_material_service().serialize_ticker_material(ticker),
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class TenantTickerMaterialDetailView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def patch(self, request, tenant_id, ticker_id):
+        serializer = UpdateTickerMaterialSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            ticker = _text_material_service().update_ticker_material(
+                tenant_id,
+                ticker_id,
+                **serializer.validated_data,
+            )
+        except TenantNotFoundError:
+            return Response({'detail': 'Tenant not found'}, status=status.HTTP_404_NOT_FOUND)
+        except TickerMaterialNotFoundError:
+            return Response(
+                {'detail': 'Ticker material not found'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        return Response(_text_material_service().serialize_ticker_material(ticker))
+
+    def delete(self, request, tenant_id, ticker_id):
+        try:
+            _text_material_service().delete_ticker_material(tenant_id, ticker_id)
+        except TenantNotFoundError:
+            return Response({'detail': 'Tenant not found'}, status=status.HTTP_404_NOT_FOUND)
+        except TickerMaterialNotFoundError:
+            return Response(
+                {'detail': 'Ticker material not found'},
                 status=status.HTTP_404_NOT_FOUND,
             )
 

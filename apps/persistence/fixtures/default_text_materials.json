@@ -1,0 +1,84 @@
+{
+  "banners": [
+    {
+      "uuid": "a1000001-0000-4000-8000-000000000001",
+      "label": "Host intro",
+      "title": "Alex Rivera",
+      "description": "Live from Studio A",
+      "theme": "classic",
+      "primary": "#111111",
+      "secondary": "#374151",
+      "accent": "#38bdf8",
+      "font_size": 32,
+      "is_display_names": true,
+      "is_default": true,
+      "is_active": true
+    },
+    {
+      "uuid": "a1000001-0000-4000-8000-000000000002",
+      "label": "Short title",
+      "title": "Q&A",
+      "description": "",
+      "theme": "classic",
+      "primary": "#1e293b",
+      "secondary": "#334155",
+      "accent": "#38bdf8",
+      "font_size": 32,
+      "is_display_names": true,
+      "is_default": true,
+      "is_active": true
+    },
+    {
+      "uuid": "a1000001-0000-4000-8000-000000000003",
+      "label": "Guest spotlight",
+      "title": "Dr. Jane Smith",
+      "description": "Product Lead · Acme Co",
+      "theme": "default",
+      "primary": "#0f172a",
+      "secondary": "#1e293b",
+      "accent": "#38bdf8",
+      "font_size": 32,
+      "is_display_names": true,
+      "is_default": true,
+      "is_active": true
+    }
+  ],
+  "tickers": [
+    {
+      "uuid": "b2000002-0000-4000-8000-000000000001",
+      "label": "Welcome",
+      "ticker_text": "Welcome to the live stream — say hi in the chat!",
+      "ticker_position": "bottom",
+      "ticker_direction": "rtl",
+      "ticker_speed": 2.0,
+      "primary": "#000000",
+      "secondary": "#ffffff",
+      "is_default": true,
+      "is_active": true
+    },
+    {
+      "uuid": "b2000002-0000-4000-8000-000000000002",
+      "label": "Call to action",
+      "ticker_text": "Visit example.com for exclusive offers • Follow us @studio",
+      "ticker_position": "bottom",
+      "ticker_direction": "rtl",
+      "ticker_speed": 2.5,
+      "primary": "#111827",
+      "secondary": "#fbbf24",
+      "is_default": true,
+      "is_active": true
+    },
+    {
+      "uuid": "b2000002-0000-4000-8000-000000000003",
+      "label": "Breaking (top)",
+      "ticker_text": "BREAKING: New feature launch today at 3 PM ET",
+      "ticker_position": "top",
+      "ticker_direction": "ltr",
+      "ticker_speed": 2.0,
+      "primary": "#991b1b",
+      "secondary": "#ffffff",
+      "is_default": true,
+      "is_active": true
+    }
+  ]
+}

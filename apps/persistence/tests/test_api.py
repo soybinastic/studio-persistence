@@ -26,6 +26,10 @@ class TenantBootstrapTests(TestCase):
         self.assertEqual(response.data['configuration']['destinations'], [])
         self.assertEqual(response.data['configuration']['layout'], 'CONTAIN')
         self.assertIsNone(response.data['configuration']['active_scene_id'])
+        self.assertIn('asset_catalog', response.data['configuration'])
+        self.assertEqual(response.data['configuration']['asset_catalog']['logos'], [])
+        self.assertIn('text_material_catalog', response.data['configuration'])
+        self.assertEqual(response.data['configuration']['text_material_catalog']['banners'], [])
 
     def test_returns_existing_tenant_without_creating(self):
         payload = {'tenant_id': str(self.tenant_id), 'tenant_name': 'My Studio'}

@@ -1,10 +1,13 @@
 from django.contrib import admin
 
 from apps.persistence.models import (
+    StudioMediaAsset,
     Tenant,
+    TenantBannerMaterial,
     TenantConfiguration,
     TenantDestination,
     TenantScene,
+    TenantTickerMaterial,
 )
 
 
@@ -28,3 +31,49 @@ class TenantSceneAdmin(admin.ModelAdmin):
 @admin.register(TenantDestination)
 class TenantDestinationAdmin(admin.ModelAdmin):
     list_display = ('label', 'tenant', 'platform', 'url', 'sort_order')
+
+
+@admin.register(StudioMediaAsset)
+class StudioMediaAssetAdmin(admin.ModelAdmin):
+    list_display = (
+        'id',
+        'tenant',
+        'asset_type',
+        'media_format',
+        'label',
+        'is_system_default',
+        'is_active',
+        'sort_order',
+    )
+    list_filter = ('asset_type', 'media_format', 'is_system_default', 'is_active')
+    search_fields = ('id', 'label', 'source')
+
+
+@admin.register(TenantBannerMaterial)
+class TenantBannerMaterialAdmin(admin.ModelAdmin):
+    list_display = (
+        'label',
+        'title',
+        'tenant',
+        'theme',
+        'is_system_default',
+        'is_active',
+        'sort_order',
+    )
+    list_filter = ('theme', 'is_system_default', 'is_active')
+    search_fields = ('label', 'title', 'description')
+
+
+@admin.register(TenantTickerMaterial)
+class TenantTickerMaterialAdmin(admin.ModelAdmin):
+    list_display = (
+        'label',
+        'tenant',
+        'ticker_position',
+        'ticker_direction',
+        'is_system_default',
+        'is_active',
+        'sort_order',
+    )
+    list_filter = ('ticker_position', 'is_system_default', 'is_active')
+    search_fields = ('label', 'ticker_text')

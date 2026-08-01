@@ -8,13 +8,17 @@ from typing import Any
 
 from django.db import transaction
 
+from apps.persistence.asset_service import AssetCatalogService
 from apps.persistence.constants import (
+    DEFAULT_ASSET_CATALOG,
     DEFAULT_BACKGROUND_MUSIC_CONFIG,
     DEFAULT_DEVICES_CONFIG,
     DEFAULT_GRAPHICS_CONFIG,
     DEFAULT_SOURCES_CONFIG,
+    DEFAULT_TEXT_MATERIAL_CATALOG,
     DEFAULT_TILE_ORDER_CONFIG,
 )
+from apps.persistence.text_material_service import TextMaterialService
 from apps.persistence.exceptions import (
     ActiveSceneDeleteError,
     DestinationNotFoundError,
@@ -40,6 +44,8 @@ def _empty_configuration() -> dict[str, Any]:
         'graphics_config': copy.deepcopy(DEFAULT_GRAPHICS_CONFIG),
         'scenes': [],
         'destinations': [],
+        'asset_catalog': copy.deepcopy(DEFAULT_ASSET_CATALOG),
+        'text_material_catalog': copy.deepcopy(DEFAULT_TEXT_MATERIAL_CATALOG),
     }
 
 
@@ -116,6 +122,9 @@ class TenantService:
         )
         destinations = tenant.destinations.order_by('sort_order', 'created_at')
 
+        asset_catalog = AssetCatalogService().build_asset_catalog(tenant.id)
+        text_material_catalog = TextMaterialService().build_text_material_catalog(tenant.id)
+
         return {
             'layout': config.layout,
             'tile_order_config': config.tile_order_config or dict(DEFAULT_TILE_ORDER_CONFIG),
@@ -128,6 +137,8 @@ class TenantService:
             'destinations': [
                 self._serialize_destination(destination) for destination in destinations
             ],
+            'asset_catalog': asset_catalog,
+            'text_material_catalog': text_material_catalog,
         }
 
     def update_configuration(

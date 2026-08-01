@@ -11,6 +11,8 @@ source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
 python manage.py migrate
+python manage.py seed_studio_assets
+python manage.py seed_text_materials
 python manage.py runserver 8001
 ```
 
@@ -49,7 +51,15 @@ Response (new tenant, HTTP 201):
       "chat": null
     },
     "scenes": [],
-    "destinations": []
+    "destinations": [],
+    "asset_catalog": {
+      "backgrounds": [],
+      "background_videos": [],
+      "overlays": [],
+      "logos": [],
+      "green_screens": [],
+      "qr_codes": []
+    }
   }
 }
 ```
@@ -78,8 +88,71 @@ Studio changes are dual-written to compositor (live session) and persistence (te
 | PATCH/DELETE | `/api/persistence/tenant/{tenant_id}/scenes/{scene_id}/` | Update or delete a scene |
 | GET/POST | `/api/persistence/tenant/{tenant_id}/destinations/` | List or create RTMP destinations |
 | PATCH/DELETE | `/api/persistence/tenant/{tenant_id}/destinations/{destination_id}/` | Update or delete a destination |
+| GET | `/api/persistence/tenant/{tenant_id}/assets/` | Studio media catalog (backgrounds, overlays, logos, etc.) |
+| GET | `/api/persistence/tenant/{tenant_id}/text-materials/` | Banner and ticker material catalog |
+| GET/POST | `/api/persistence/tenant/{tenant_id}/banners/` | List or create banner materials |
+| PATCH/DELETE | `/api/persistence/tenant/{tenant_id}/banners/{banner_id}/` | Update or delete a tenant banner |
+| GET/POST | `/api/persistence/tenant/{tenant_id}/tickers/` | List or create ticker materials |
+| PATCH/DELETE | `/api/persistence/tenant/{tenant_id}/tickers/{ticker_id}/` | Update or delete a tenant ticker |
 
 Scene and configuration shapes mirror compositor-backend so the frontend can reuse existing types.
+
+## Studio media assets
+
+System-default graphics materials (backgrounds, animated backgrounds, overlays, logos) are stored in `StudioMediaAsset` with `tenant=NULL`. Tenant uploads are stored with `tenant=<uuid>`.
+
+Asset type codes (legacy CMS):
+
+| Type | Category |
+|------|----------|
+| 1 | Logo |
+| 2 | Overlay |
+| 4 | Background (image or video) |
+| 5 | Green screen |
+| 6 | QR code |
+
+Seed the 25 system defaults after migrating:
+
+```bash
+python manage.py seed_studio_assets
+```
+
+The bootstrap and configuration responses include `asset_catalog`, grouped as:
+
+```json
+{
+  "backgrounds": [],
+  "background_videos": [],
+  "overlays": [],
+  "logos": [],
+  "green_screens": [],
+  "qr_codes": []
+}
+```
+
+## Banner and ticker materials
+
+Host-created banner lower-thirds and scrolling tickers are stored as tenant materials:
+
+- `TenantBannerMaterial` — title, description, theme, colors, font size
+- `TenantTickerMaterial` — scrolling text, position, direction, speed, colors
+
+System defaults use `tenant=NULL` (same pattern as media assets). Bootstrap includes `text_material_catalog`:
+
+```json
+{
+  "banners": [],
+  "tickers": []
+}
+```
+
+Each catalog item includes a compositor-ready `banner` or `ticker` payload for the graphics panel.
+
+Seed the 3 system banner + 3 system ticker presets:
+
+```bash
+python manage.py seed_text_materials
+```
 
 ## Tests
 

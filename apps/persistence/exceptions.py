@@ -19,3 +19,11 @@ class ActiveSceneDeleteError(Exception):
 
 class InvalidCountdownTargetError(Exception):
     pass
+
+
+class BannerMaterialNotFoundError(Exception):
+    pass
+
+
+class TickerMaterialNotFoundError(Exception):
+    pass
