@@ -14,7 +14,9 @@ DEFAULT_GRAPHICS_CONFIG: dict = {layer: None for layer in GRAPHICS_LAYERS}
 
 DEFAULT_DEVICES_CONFIG: dict = {
     'cameraId': None,
+    'cameraLabel': None,
     'microphoneId': None,
+    'microphoneLabel': None,
     'speakerId': None,
 }
 

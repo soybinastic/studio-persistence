@@ -23,7 +23,9 @@ class TenantBootstrapSerializer(serializers.Serializer):
 
 class DevicesConfigSerializer(serializers.Serializer):
     cameraId = serializers.CharField(required=False, allow_null=True, default=None)
+    cameraLabel = serializers.CharField(required=False, allow_null=True, default=None)
     microphoneId = serializers.CharField(required=False, allow_null=True, default=None)
+    microphoneLabel = serializers.CharField(required=False, allow_null=True, default=None)
     speakerId = serializers.CharField(required=False, allow_null=True, default=None)
 
 
