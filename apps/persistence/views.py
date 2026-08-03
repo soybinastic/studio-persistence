@@ -29,6 +29,7 @@ from apps.persistence.serializers import (
     UpdateDestinationSerializer,
     UpdateSceneSerializer,
     UpdateTickerMaterialSerializer,
+    PlatformConnectionEmbedImportSerializer,
     PlatformConnectionSerializer,
     TwitchAuthorizeQuerySerializer,
 )
@@ -553,6 +554,39 @@ class TenantPlatformConnectionRefreshView(APIView):
             return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(PlatformConnectionSerializer(connection).data)
+
+
+class TenantPlatformConnectionImportView(APIView):
+    """Import OAuth credentials from CMS embed postMessage (studio-frontend persists on behalf of parent)."""
+
+    authentication_classes = []
+    permission_classes = []
+
+    def post(self, request, tenant_id):
+        serializer = PlatformConnectionEmbedImportSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        try:
+            connection = _platform_connection_service().import_platform_connection_from_embed(
+                tenant_id,
+                data['platform'],
+                name=data['name'],
+                platform_login=data['platform_login'],
+                platform_user_id=data.get('platform_user_id') or '',
+                access_token=data.get('access_token') or '',
+                refresh_token=data.get('refresh_token') or '',
+                stream_key=data.get('stream_key') or '',
+                rtmp_url=data.get('rtmp_url') or '',
+                token_expires_at=data.get('token_expires_at'),
+                metadata=data.get('metadata') or {},
+            )
+        except TenantNotFoundError:
+            return Response({'detail': 'Tenant not found'}, status=status.HTTP_404_NOT_FOUND)
+        except PlatformIntegrationError as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(PlatformConnectionSerializer(connection).data, status=status.HTTP_200_OK)
 
 
 class TwitchChatCredentialsView(APIView):

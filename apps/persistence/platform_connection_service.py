@@ -26,6 +26,7 @@ from apps.persistence.models import (
 )
 from apps.persistence.services import TenantService
 from apps.persistence.twitch_service import (
+    TWITCH_RTMP_INGEST,
     TwitchIntegrationError,
     complete_oauth_connection,
     refresh_access_token,
@@ -147,6 +148,87 @@ class PlatformConnectionService:
 
         return connection, payload.get('return_url', '')
 
+    def import_platform_connection_from_embed(
+        self,
+        tenant_id: uuid.UUID,
+        platform: str,
+        *,
+        name: str,
+        platform_login: str,
+        platform_user_id: str = '',
+        access_token: str = '',
+        refresh_token: str = '',
+        stream_key: str = '',
+        rtmp_url: str = '',
+        token_expires_at=None,
+        metadata: dict[str, Any] | None = None,
+    ) -> PlatformConnection:
+        """Persist OAuth credentials supplied by CMS parent via studio-embed postMessage."""
+        if platform not in PlatformType.values:
+            raise PlatformIntegrationError(f'Unsupported platform "{platform}"')
+
+        platform_type = PlatformType(platform)
+        tenant = self._tenant_service.get_tenant(tenant_id)
+
+        login = platform_login.strip()
+        if not login:
+            raise PlatformIntegrationError('platform_login is required')
+
+        display_name = (name or login).strip() or login
+        resolved_rtmp_url = self._resolve_embed_rtmp_url(platform_type, rtmp_url, stream_key)
+
+        if platform_type == PlatformType.TWITCH and not resolved_rtmp_url:
+            raise PlatformIntegrationError('Twitch import requires stream_key or rtmp_url')
+
+        embed_metadata = dict(metadata or {})
+        embed_metadata.setdefault('source', 'cms_embed')
+
+        with transaction.atomic():
+            connection = PlatformConnection.objects.filter(
+                tenant=tenant,
+                platform=platform_type,
+            ).first()
+
+            if connection is None:
+                connection = PlatformConnection(
+                    tenant=tenant,
+                    platform=platform_type,
+                    sort_order=tenant.platform_connections.count(),
+                )
+
+            connection.name = display_name
+            connection.status = ConnectionStatus.CONNECTED
+            connection.platform_user_id = platform_user_id.strip()
+            connection.platform_login = login
+            connection.metadata = embed_metadata
+
+            if access_token.strip():
+                connection.access_token_encrypted = encrypt_secret(access_token.strip())
+            if refresh_token.strip():
+                connection.refresh_token_encrypted = encrypt_secret(refresh_token.strip())
+            if token_expires_at is not None:
+                connection.token_expires_at = token_expires_at
+            elif not refresh_token.strip():
+                connection.token_expires_at = None
+
+            if stream_key.strip():
+                connection.stream_key_encrypted = encrypt_secret(stream_key.strip())
+
+            connection.save()
+
+            if resolved_rtmp_url:
+                destination = self._sync_platform_destination(
+                    tenant=tenant,
+                    connection=connection,
+                    platform=platform_type,
+                    label=display_name,
+                    rtmp_url=resolved_rtmp_url,
+                )
+                connection.destination = destination
+                connection.save(update_fields=['destination', 'updated_at'])
+
+        return connection
+
     def refresh_twitch_stream_key(
         self,
         tenant_id: uuid.UUID,
@@ -259,11 +341,28 @@ class PlatformConnectionService:
         label: str,
         rtmp_url: str,
     ) -> TenantDestination:
+        return self._sync_platform_destination(
+            tenant=tenant,
+            connection=connection,
+            platform=PlatformType.TWITCH,
+            label=label,
+            rtmp_url=rtmp_url,
+        )
+
+    def _sync_platform_destination(
+        self,
+        *,
+        tenant: Tenant,
+        connection: PlatformConnection,
+        platform: PlatformType,
+        label: str,
+        rtmp_url: str,
+    ) -> TenantDestination:
         destination = connection.destination
         if destination is None:
             destination = TenantDestination.objects.filter(
                 tenant=tenant,
-                platform=PlatformType.TWITCH,
+                platform=platform,
             ).first()
 
         if destination is None:
@@ -271,15 +370,37 @@ class PlatformConnectionService:
                 tenant=tenant,
                 label=label,
                 url=rtmp_url,
-                platform=PlatformType.TWITCH,
+                platform=platform,
                 sort_order=tenant.destinations.count(),
             )
 
         destination.label = label
         destination.url = rtmp_url
-        destination.platform = PlatformType.TWITCH
+        destination.platform = platform
         destination.save(update_fields=['label', 'url', 'platform', 'updated_at'])
         return destination
+
+    @staticmethod
+    def _resolve_embed_rtmp_url(
+        platform: PlatformType,
+        rtmp_url: str,
+        stream_key: str,
+    ) -> str:
+        url = rtmp_url.strip()
+        key = stream_key.strip()
+
+        if not url and not key:
+            return ''
+
+        if url and key:
+            if key in url:
+                return url
+            return f'{url.rstrip("/")}/{key}'
+
+        if key and platform == PlatformType.TWITCH:
+            return f'{TWITCH_RTMP_INGEST}/{key}'
+
+        return url
 
     def _sign_state(self, payload: dict[str, str]) -> str:
         import json

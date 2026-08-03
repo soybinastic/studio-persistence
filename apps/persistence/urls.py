@@ -10,6 +10,7 @@ from apps.persistence.views import (
     TenantDestinationListCreateView,
     TenantPlatformConnectionDetailView,
     TenantPlatformConnectionDisconnectView,
+    TenantPlatformConnectionImportView,
     TenantPlatformConnectionListView,
     TenantPlatformConnectionRefreshView,
     TenantSceneDetailView,
@@ -78,6 +79,11 @@ urlpatterns = [
         'tenant/<uuid:tenant_id>/tickers/<uuid:ticker_id>/',
         TenantTickerMaterialDetailView.as_view(),
         name='tenant-ticker-detail',
+    ),
+    path(
+        'tenant/<uuid:tenant_id>/platform-connections/import/',
+        TenantPlatformConnectionImportView.as_view(),
+        name='tenant-platform-connection-import',
     ),
     path(
         'tenant/<uuid:tenant_id>/platform-connections/',

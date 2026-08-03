@@ -8,6 +8,7 @@ from apps.persistence.constants import (
 from apps.persistence.models import (
     LayoutType,
     PlatformConnection,
+    PlatformType,
     SceneType,
     TenantBannerMaterial,
     TenantDestination,
@@ -332,3 +333,21 @@ class PlatformConnectionSerializer(serializers.ModelSerializer):
 class TwitchAuthorizeQuerySerializer(serializers.Serializer):
     tenant_id = serializers.UUIDField()
     return_url = serializers.URLField(required=False, allow_blank=True, default='')
+
+
+class PlatformConnectionEmbedImportSerializer(serializers.Serializer):
+    platform = serializers.ChoiceField(choices=PlatformType.choices)
+    name = serializers.CharField(max_length=255, trim_whitespace=True)
+    platform_login = serializers.CharField(max_length=128, trim_whitespace=True)
+    platform_user_id = serializers.CharField(
+        max_length=128,
+        required=False,
+        allow_blank=True,
+        default='',
+    )
+    access_token = serializers.CharField(required=False, allow_blank=True, default='')
+    refresh_token = serializers.CharField(required=False, allow_blank=True, default='')
+    stream_key = serializers.CharField(required=False, allow_blank=True, default='')
+    rtmp_url = serializers.CharField(required=False, allow_blank=True, default='')
+    token_expires_at = serializers.DateTimeField(required=False, allow_null=True)
+    metadata = serializers.DictField(required=False, default=dict)

@@ -163,3 +163,65 @@ class PlatformConnectionTests(TestCase):
         service = PlatformConnectionService()
         with self.assertRaises(PlatformIntegrationError):
             service.build_twitch_authorize_url(self.tenant_id)
+
+    def test_import_twitch_connection_from_embed(self):
+        payload = {
+            'platform': PlatformType.TWITCH,
+            'name': 'Streamer Pro',
+            'platform_login': 'streamer_pro',
+            'platform_user_id': '12345',
+            'access_token': 'access-token',
+            'refresh_token': 'refresh-token',
+            'stream_key': 'live-stream-key',
+            'rtmp_url': 'rtmp://live.twitch.tv/app',
+            'metadata': {'source': 'cms_embed'},
+        }
+
+        response = self.client.post(
+            reverse('tenant-platform-connection-import', kwargs={'tenant_id': self.tenant_id}),
+            payload,
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['platform'], PlatformType.TWITCH)
+        self.assertEqual(response.data['platform_login'], 'streamer_pro')
+        self.assertTrue(response.data['has_stream_key'])
+
+        connection = PlatformConnection.objects.get(tenant_id=self.tenant_id)
+        self.assertEqual(connection.status, ConnectionStatus.CONNECTED)
+        self.assertFalse(connection.access_token_encrypted.startswith('access-token'))
+
+        destination = TenantDestination.objects.get(tenant_id=self.tenant_id, platform='twitch')
+        self.assertEqual(destination.url, 'rtmp://live.twitch.tv/app/live-stream-key')
+
+    def test_import_youtube_connection_without_rtmp(self):
+        payload = {
+            'platform': PlatformType.YOUTUBE,
+            'name': 'My Channel',
+            'platform_login': 'my-channel',
+            'platform_user_id': 'UC123',
+            'access_token': 'yt-access',
+            'refresh_token': 'yt-refresh',
+        }
+
+        response = self.client.post(
+            reverse('tenant-platform-connection-import', kwargs={'tenant_id': self.tenant_id}),
+            payload,
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['platform'], PlatformType.YOUTUBE)
+        self.assertEqual(
+            PlatformConnection.objects.filter(
+                tenant_id=self.tenant_id,
+                platform=PlatformType.YOUTUBE,
+            ).count(),
+            1,
+        )
+        self.assertEqual(
+            TenantDestination.objects.filter(
+                tenant_id=self.tenant_id,
+                platform=PlatformType.YOUTUBE,
+            ).count(),
+            0,
+        )
