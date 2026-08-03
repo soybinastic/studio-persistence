@@ -612,14 +612,14 @@ class TwitchChatCredentialsView(APIView):
 
 
 class FacebookEmbedCredentialsView(APIView):
-    """Returns Facebook tokens for CMS embed go-live refresh (studio-frontend → CMS postMessage)."""
+    """Returns platform tokens for CMS embed go-live refresh (studio-frontend → CMS postMessage)."""
 
     authentication_classes = []
     permission_classes = []
 
     def get(self, request, tenant_id, connection_id):
         try:
-            credentials = _platform_connection_service().get_facebook_embed_credentials(
+            credentials = _platform_connection_service().get_embed_credentials(
                 tenant_id,
                 connection_id,
             )
