@@ -34,6 +34,8 @@ from apps.persistence.twitch_service import (
     build_authorize_url,
 )
 
+FACEBOOK_RTMP_INGEST = 'rtmps://live-api-s.facebook.com:443/rtmp'
+
 
 class PlatformConnectionService:
     OAUTH_STATE_MAX_AGE = 600
@@ -408,6 +410,9 @@ class PlatformConnectionService:
 
         if key and platform == PlatformType.TWITCH:
             return f'{TWITCH_RTMP_INGEST}/{key}'
+
+        if key and platform == PlatformType.FACEBOOK:
+            return f'{FACEBOOK_RTMP_INGEST}/{key}'
 
         return url
 
