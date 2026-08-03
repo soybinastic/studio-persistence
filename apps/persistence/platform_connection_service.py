@@ -35,6 +35,7 @@ from apps.persistence.twitch_service import (
 )
 
 FACEBOOK_RTMP_INGEST = 'rtmps://live-api-s.facebook.com:443/rtmp'
+YOUTUBE_RTMP_INGEST = 'rtmp://a.rtmp.youtube.com/live2'
 
 
 class PlatformConnectionService:
@@ -319,24 +320,40 @@ class PlatformConnectionService:
 
         return decrypt_secret(connection.access_token_encrypted)
 
-    def get_facebook_embed_credentials(
+    def get_embed_credentials(
         self,
         tenant_id: uuid.UUID,
         connection_id: uuid.UUID,
     ) -> dict[str, Any]:
         connection = self.get_connection(tenant_id, connection_id)
-        if connection.platform != PlatformType.FACEBOOK:
-            raise PlatformIntegrationError('Embed credentials are only supported for Facebook')
+        if connection.platform not in (PlatformType.FACEBOOK, PlatformType.YOUTUBE):
+            raise PlatformIntegrationError(
+                'Embed credentials are only supported for Facebook and YouTube',
+            )
         if not connection.access_token_encrypted:
-            raise PlatformIntegrationError('Facebook connection is missing an access token')
+            raise PlatformIntegrationError(
+                f'{connection.platform} connection is missing an access token',
+            )
 
-        return {
+        result: dict[str, Any] = {
             'access_token': decrypt_secret(connection.access_token_encrypted),
             'platform_user_id': connection.platform_user_id,
             'platform_login': connection.platform_login,
             'name': connection.name,
             'metadata': dict(connection.metadata or {}),
         }
+        if connection.refresh_token_encrypted:
+            result['refresh_token'] = decrypt_secret(connection.refresh_token_encrypted)
+        if connection.token_expires_at:
+            result['token_expires_at'] = connection.token_expires_at.isoformat()
+        return result
+
+    def get_facebook_embed_credentials(
+        self,
+        tenant_id: uuid.UUID,
+        connection_id: uuid.UUID,
+    ) -> dict[str, Any]:
+        return self.get_embed_credentials(tenant_id, connection_id)
 
     def get_twitch_chat_credentials(self, tenant_id: uuid.UUID) -> dict[str, str]:
         connection = PlatformConnection.objects.filter(
@@ -432,6 +449,9 @@ class PlatformConnectionService:
 
         if key and platform == PlatformType.FACEBOOK:
             return f'{FACEBOOK_RTMP_INGEST}/{key}'
+
+        if key and platform == PlatformType.YOUTUBE:
+            return f'{YOUTUBE_RTMP_INGEST}/{key}'
 
         return url
 

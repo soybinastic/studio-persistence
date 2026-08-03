@@ -266,6 +266,62 @@ class PlatformConnectionTests(TestCase):
         self.assertEqual(credentials_response.data['platform_user_id'], 'page-123')
         self.assertEqual(credentials_response.data['metadata']['page_id'], 'page-123')
 
+    def test_youtube_embed_credentials_endpoint(self):
+        import_response = self.client.post(
+            reverse('tenant-platform-connection-import', kwargs={'tenant_id': self.tenant_id}),
+            {
+                'platform': PlatformType.YOUTUBE,
+                'name': 'My Channel',
+                'platform_login': 'My Channel',
+                'platform_user_id': 'channel-123',
+                'access_token': 'yt-access-token',
+                'refresh_token': 'yt-refresh-token',
+                'metadata': {
+                    'source': 'cms_embed',
+                    'channel_id': 'channel-123',
+                },
+            },
+            format='json',
+        )
+        self.assertEqual(import_response.status_code, status.HTTP_200_OK)
+        connection_id = import_response.data['connection_id']
+
+        credentials_response = self.client.get(
+            reverse(
+                'facebook-embed-credentials',
+                kwargs={'tenant_id': self.tenant_id, 'connection_id': connection_id},
+            ),
+        )
+        self.assertEqual(credentials_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(credentials_response.data['access_token'], 'yt-access-token')
+        self.assertEqual(credentials_response.data['refresh_token'], 'yt-refresh-token')
+        self.assertEqual(credentials_response.data['platform_user_id'], 'channel-123')
+        self.assertEqual(credentials_response.data['metadata']['channel_id'], 'channel-123')
+
+    def test_youtube_import_resolves_rtmp_url_from_stream_key(self):
+        import_response = self.client.post(
+            reverse('tenant-platform-connection-import', kwargs={'tenant_id': self.tenant_id}),
+            {
+                'platform': PlatformType.YOUTUBE,
+                'name': 'My Channel',
+                'platform_login': 'My Channel',
+                'platform_user_id': 'channel-123',
+                'access_token': 'yt-access-token',
+                'stream_key': 'yt-stream-key',
+                'rtmp_url': 'rtmp://a.rtmp.youtube.com/live2',
+                'metadata': {'source': 'cms_embed'},
+            },
+            format='json',
+        )
+        self.assertEqual(import_response.status_code, status.HTTP_200_OK)
+        self.assertTrue(import_response.data['has_stream_key'])
+
+        destination = TenantDestination.objects.get(tenant_id=self.tenant_id)
+        self.assertEqual(
+            destination.url,
+            'rtmp://a.rtmp.youtube.com/live2/yt-stream-key',
+        )
+
     def test_refresh_skips_cms_embed_connection_with_stream_key(self):
         import_response = self.client.post(
             reverse('tenant-platform-connection-import', kwargs={'tenant_id': self.tenant_id}),
