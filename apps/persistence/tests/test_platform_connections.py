@@ -195,6 +195,77 @@ class PlatformConnectionTests(TestCase):
         destination = TenantDestination.objects.get(tenant_id=self.tenant_id, platform='twitch')
         self.assertEqual(destination.url, 'rtmp://live.twitch.tv/app/live-stream-key')
 
+    def test_import_facebook_connection_from_embed(self):
+        payload = {
+            'platform': PlatformType.FACEBOOK,
+            'name': 'My Page (Page)',
+            'platform_login': 'My Page (Page)',
+            'platform_user_id': '123456789',
+            'access_token': 'fb-access-token',
+            'stream_key': 'fb-stream-key',
+            'rtmp_url': 'rtmps://live-api-s.facebook.com:443/rtmp/',
+            'metadata': {
+                'source': 'cms_oauth',
+                'account_type': 'Page',
+                'page_id': '123456789',
+                'facebook_user_id': '987654321',
+                'live_video_id': 'live-video-id',
+            },
+        }
+
+        response = self.client.post(
+            reverse('tenant-platform-connection-import', kwargs={'tenant_id': self.tenant_id}),
+            payload,
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['platform'], PlatformType.FACEBOOK)
+        self.assertTrue(response.data['has_stream_key'])
+
+        connection = PlatformConnection.objects.get(tenant_id=self.tenant_id, platform=PlatformType.FACEBOOK)
+        self.assertEqual(connection.status, ConnectionStatus.CONNECTED)
+        self.assertEqual(connection.metadata.get('live_video_id'), 'live-video-id')
+
+        destination = TenantDestination.objects.get(tenant_id=self.tenant_id, platform='facebook')
+        self.assertEqual(
+            destination.url,
+            'rtmps://live-api-s.facebook.com:443/rtmp/fb-stream-key',
+        )
+
+    def test_facebook_embed_credentials_endpoint(self):
+        import_response = self.client.post(
+            reverse('tenant-platform-connection-import', kwargs={'tenant_id': self.tenant_id}),
+            {
+                'platform': PlatformType.FACEBOOK,
+                'name': 'My Page (Page)',
+                'platform_login': 'My Page (Page)',
+                'platform_user_id': 'page-123',
+                'access_token': 'fb-page-token',
+                'stream_key': 'fb-stream-key',
+                'rtmp_url': 'rtmps://live-api-s.facebook.com:443/rtmp/',
+                'metadata': {
+                    'source': 'cms_embed',
+                    'account_type': 'Page',
+                    'page_id': 'page-123',
+                    'facebook_user_id': 'user-456',
+                },
+            },
+            format='json',
+        )
+        self.assertEqual(import_response.status_code, status.HTTP_200_OK)
+        connection_id = import_response.data['connection_id']
+
+        credentials_response = self.client.get(
+            reverse(
+                'facebook-embed-credentials',
+                kwargs={'tenant_id': self.tenant_id, 'connection_id': connection_id},
+            ),
+        )
+        self.assertEqual(credentials_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(credentials_response.data['access_token'], 'fb-page-token')
+        self.assertEqual(credentials_response.data['platform_user_id'], 'page-123')
+        self.assertEqual(credentials_response.data['metadata']['page_id'], 'page-123')
+
     def test_refresh_skips_cms_embed_connection_with_stream_key(self):
         import_response = self.client.post(
             reverse('tenant-platform-connection-import', kwargs={'tenant_id': self.tenant_id}),
