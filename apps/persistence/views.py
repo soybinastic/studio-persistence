@@ -611,6 +611,31 @@ class TwitchChatCredentialsView(APIView):
         return Response(credentials)
 
 
+class FacebookEmbedCredentialsView(APIView):
+    """Returns Facebook tokens for CMS embed go-live refresh (studio-frontend → CMS postMessage)."""
+
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request, tenant_id, connection_id):
+        try:
+            credentials = _platform_connection_service().get_facebook_embed_credentials(
+                tenant_id,
+                connection_id,
+            )
+        except TenantNotFoundError:
+            return Response({'detail': 'Tenant not found'}, status=status.HTTP_404_NOT_FOUND)
+        except PlatformConnectionNotFoundError:
+            return Response(
+                {'detail': 'Platform connection not found'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        except PlatformIntegrationError as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(credentials)
+
+
 class TwitchAuthorizeView(APIView):
     authentication_classes = []
     permission_classes = []

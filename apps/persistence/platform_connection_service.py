@@ -319,6 +319,25 @@ class PlatformConnectionService:
 
         return decrypt_secret(connection.access_token_encrypted)
 
+    def get_facebook_embed_credentials(
+        self,
+        tenant_id: uuid.UUID,
+        connection_id: uuid.UUID,
+    ) -> dict[str, Any]:
+        connection = self.get_connection(tenant_id, connection_id)
+        if connection.platform != PlatformType.FACEBOOK:
+            raise PlatformIntegrationError('Embed credentials are only supported for Facebook')
+        if not connection.access_token_encrypted:
+            raise PlatformIntegrationError('Facebook connection is missing an access token')
+
+        return {
+            'access_token': decrypt_secret(connection.access_token_encrypted),
+            'platform_user_id': connection.platform_user_id,
+            'platform_login': connection.platform_login,
+            'name': connection.name,
+            'metadata': dict(connection.metadata or {}),
+        }
+
     def get_twitch_chat_credentials(self, tenant_id: uuid.UUID) -> dict[str, str]:
         connection = PlatformConnection.objects.filter(
             tenant_id=tenant_id,

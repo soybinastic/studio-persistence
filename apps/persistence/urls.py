@@ -14,6 +14,7 @@ from apps.persistence.views import (
     TenantPlatformConnectionListView,
     TenantPlatformConnectionRefreshView,
     TenantSceneDetailView,
+    FacebookEmbedCredentialsView,
     TenantSceneListCreateView,
     TenantTextMaterialCatalogView,
     TenantTickerMaterialDetailView,
@@ -104,6 +105,11 @@ urlpatterns = [
         'tenant/<uuid:tenant_id>/platform-connections/<uuid:connection_id>/refresh/',
         TenantPlatformConnectionRefreshView.as_view(),
         name='tenant-platform-connection-refresh',
+    ),
+    path(
+        'tenant/<uuid:tenant_id>/platform-connections/<uuid:connection_id>/embed-credentials/',
+        FacebookEmbedCredentialsView.as_view(),
+        name='facebook-embed-credentials',
     ),
     path(
         'tenant/<uuid:tenant_id>/integrations/twitch/chat-credentials/',
