@@ -238,12 +238,16 @@ class PlatformConnectionService:
         if connection.platform != PlatformType.TWITCH:
             raise PlatformIntegrationError('Stream key refresh is only supported for Twitch')
 
+        if self._is_cms_embed_connection(connection) and connection.stream_key_encrypted:
+            if connection.status != ConnectionStatus.CONNECTED:
+                connection.status = ConnectionStatus.CONNECTED
+                connection.save(update_fields=['status', 'updated_at'])
+            return connection
+
         access_token = self._ensure_valid_access_token(connection)
         try:
             stream_key = fetch_stream_key(access_token, connection.platform_user_id)
         except TwitchIntegrationError as exc:
-            connection.status = ConnectionStatus.ERROR
-            connection.save(update_fields=['status', 'updated_at'])
             raise PlatformIntegrationError(str(exc)) from exc
 
         rtmp_url = f'rtmp://live.twitch.tv/app/{stream_key}'
@@ -379,6 +383,11 @@ class PlatformConnectionService:
         destination.platform = platform
         destination.save(update_fields=['label', 'url', 'platform', 'updated_at'])
         return destination
+
+    @staticmethod
+    def _is_cms_embed_connection(connection: PlatformConnection) -> bool:
+        source = (connection.metadata or {}).get('source', '')
+        return source in ('cms_oauth', 'cms_embed')
 
     @staticmethod
     def _resolve_embed_rtmp_url(

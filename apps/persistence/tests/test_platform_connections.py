@@ -16,6 +16,7 @@ from apps.persistence.platform_connection_service import PlatformConnectionServi
 from apps.persistence.exceptions import PlatformIntegrationError
 from apps.persistence.twitch_service import (
     TwitchConnectionResult,
+    TwitchIntegrationError,
     TwitchTokenResponse,
     TwitchUser,
 )
@@ -193,6 +194,66 @@ class PlatformConnectionTests(TestCase):
 
         destination = TenantDestination.objects.get(tenant_id=self.tenant_id, platform='twitch')
         self.assertEqual(destination.url, 'rtmp://live.twitch.tv/app/live-stream-key')
+
+    def test_refresh_skips_cms_embed_connection_with_stream_key(self):
+        import_response = self.client.post(
+            reverse('tenant-platform-connection-import', kwargs={'tenant_id': self.tenant_id}),
+            {
+                'platform': PlatformType.TWITCH,
+                'name': 'Streamer Pro',
+                'platform_login': 'streamer_pro',
+                'platform_user_id': '12345',
+                'access_token': 'access-token',
+                'stream_key': 'live-stream-key',
+                'rtmp_url': 'rtmp://live.twitch.tv/app',
+                'metadata': {'source': 'cms_oauth'},
+            },
+            format='json',
+        )
+        self.assertEqual(import_response.status_code, status.HTTP_200_OK)
+
+        connection = PlatformConnection.objects.get(tenant_id=self.tenant_id)
+        connection.status = ConnectionStatus.ERROR
+        connection.save(update_fields=['status', 'updated_at'])
+        original_stream_key = connection.stream_key_encrypted
+
+        with patch('apps.persistence.platform_connection_service.fetch_stream_key') as mock_fetch:
+            refresh_response = self.client.post(
+                reverse(
+                    'tenant-platform-connection-refresh',
+                    kwargs={'tenant_id': self.tenant_id, 'connection_id': connection.id},
+                ),
+            )
+
+        self.assertEqual(refresh_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(refresh_response.data['status'], ConnectionStatus.CONNECTED)
+        mock_fetch.assert_not_called()
+
+        connection.refresh_from_db()
+        self.assertEqual(connection.status, ConnectionStatus.CONNECTED)
+        self.assertEqual(connection.stream_key_encrypted, original_stream_key)
+
+    @patch('apps.persistence.platform_connection_service.fetch_stream_key')
+    @patch('apps.persistence.platform_connection_service.complete_oauth_connection')
+    def test_refresh_failure_does_not_set_error_status(self, mock_complete, mock_fetch):
+        mock_complete.return_value = _mock_twitch_result()
+        service = PlatformConnectionService()
+        state = service._sign_state({'tenant_id': str(self.tenant_id), 'platform': PlatformType.TWITCH})
+        self.client.get(reverse('twitch-oauth-callback'), {'code': 'oauth-code', 'state': state})
+
+        connection = PlatformConnection.objects.get(tenant_id=self.tenant_id)
+        mock_fetch.side_effect = TwitchIntegrationError('Helix failed')
+
+        refresh_response = self.client.post(
+            reverse(
+                'tenant-platform-connection-refresh',
+                kwargs={'tenant_id': self.tenant_id, 'connection_id': connection.id},
+            ),
+        )
+        self.assertEqual(refresh_response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        connection.refresh_from_db()
+        self.assertEqual(connection.status, ConnectionStatus.CONNECTED)
 
     def test_import_youtube_connection_without_rtmp(self):
         payload = {
