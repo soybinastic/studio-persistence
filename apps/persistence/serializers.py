@@ -7,6 +7,8 @@ from apps.persistence.constants import (
 )
 from apps.persistence.models import (
     LayoutType,
+    PlatformConnection,
+    PlatformType,
     SceneType,
     TenantBannerMaterial,
     TenantDestination,
@@ -22,7 +24,9 @@ class TenantBootstrapSerializer(serializers.Serializer):
 
 class DevicesConfigSerializer(serializers.Serializer):
     cameraId = serializers.CharField(required=False, allow_null=True, default=None)
+    cameraLabel = serializers.CharField(required=False, allow_null=True, default=None)
     microphoneId = serializers.CharField(required=False, allow_null=True, default=None)
+    microphoneLabel = serializers.CharField(required=False, allow_null=True, default=None)
     speakerId = serializers.CharField(required=False, allow_null=True, default=None)
 
 
@@ -295,3 +299,55 @@ class TickerMaterialSerializer(serializers.ModelSerializer):
         from apps.persistence.text_material_service import TextMaterialService
 
         return TextMaterialService.ticker_graphic_from_material(obj)
+
+
+class PlatformConnectionSerializer(serializers.ModelSerializer):
+    connection_id = serializers.UUIDField(source='id', read_only=True)
+    tenant_id = serializers.UUIDField(read_only=True)
+    destination_id = serializers.UUIDField(read_only=True, allow_null=True)
+    has_stream_key = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PlatformConnection
+        fields = [
+            'connection_id',
+            'tenant_id',
+            'platform',
+            'name',
+            'status',
+            'platform_user_id',
+            'platform_login',
+            'destination_id',
+            'has_stream_key',
+            'metadata',
+            'sort_order',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = fields
+
+    def get_has_stream_key(self, obj: PlatformConnection) -> bool:
+        return bool(obj.stream_key_encrypted)
+
+
+class TwitchAuthorizeQuerySerializer(serializers.Serializer):
+    tenant_id = serializers.UUIDField()
+    return_url = serializers.URLField(required=False, allow_blank=True, default='')
+
+
+class PlatformConnectionEmbedImportSerializer(serializers.Serializer):
+    platform = serializers.ChoiceField(choices=PlatformType.choices)
+    name = serializers.CharField(max_length=255, trim_whitespace=True)
+    platform_login = serializers.CharField(max_length=128, trim_whitespace=True)
+    platform_user_id = serializers.CharField(
+        max_length=128,
+        required=False,
+        allow_blank=True,
+        default='',
+    )
+    access_token = serializers.CharField(required=False, allow_blank=True, default='')
+    refresh_token = serializers.CharField(required=False, allow_blank=True, default='')
+    stream_key = serializers.CharField(required=False, allow_blank=True, default='')
+    rtmp_url = serializers.CharField(required=False, allow_blank=True, default='')
+    token_expires_at = serializers.DateTimeField(required=False, allow_null=True)
+    metadata = serializers.DictField(required=False, default=dict)

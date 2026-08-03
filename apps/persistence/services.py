@@ -27,6 +27,7 @@ from apps.persistence.exceptions import (
     TenantNotFoundError,
 )
 from apps.persistence.models import (
+    PlatformConnection,
     SceneType,
     Tenant,
     TenantConfiguration,
@@ -44,6 +45,7 @@ def _empty_configuration() -> dict[str, Any]:
         'graphics_config': copy.deepcopy(DEFAULT_GRAPHICS_CONFIG),
         'scenes': [],
         'destinations': [],
+        'platform_connections': [],
         'asset_catalog': copy.deepcopy(DEFAULT_ASSET_CATALOG),
         'text_material_catalog': copy.deepcopy(DEFAULT_TEXT_MATERIAL_CATALOG),
     }
@@ -121,6 +123,10 @@ class TenantService:
             'created_at',
         )
         destinations = tenant.destinations.order_by('sort_order', 'created_at')
+        platform_connections = tenant.platform_connections.select_related('destination').order_by(
+            'sort_order',
+            'created_at',
+        )
 
         asset_catalog = AssetCatalogService().build_asset_catalog(tenant.id)
         text_material_catalog = TextMaterialService().build_text_material_catalog(tenant.id)
@@ -136,6 +142,10 @@ class TenantService:
             'scenes': [self._serialize_scene(scene, config.active_scene_id) for scene in scenes],
             'destinations': [
                 self._serialize_destination(destination) for destination in destinations
+            ],
+            'platform_connections': [
+                self._serialize_platform_connection(connection)
+                for connection in platform_connections
             ],
             'asset_catalog': asset_catalog,
             'text_material_catalog': text_material_catalog,
@@ -436,4 +446,22 @@ class TenantService:
             'sort_order': destination.sort_order,
             'created_at': destination.created_at.isoformat(),
             'updated_at': destination.updated_at.isoformat(),
+        }
+
+    @staticmethod
+    def _serialize_platform_connection(connection: PlatformConnection) -> dict[str, Any]:
+        return {
+            'connection_id': str(connection.id),
+            'tenant_id': str(connection.tenant_id),
+            'platform': connection.platform,
+            'name': connection.name,
+            'status': connection.status,
+            'platform_user_id': connection.platform_user_id,
+            'platform_login': connection.platform_login,
+            'destination_id': str(connection.destination_id) if connection.destination_id else None,
+            'has_stream_key': bool(connection.stream_key_encrypted),
+            'metadata': connection.metadata or {},
+            'sort_order': connection.sort_order,
+            'created_at': connection.created_at.isoformat(),
+            'updated_at': connection.updated_at.isoformat(),
         }

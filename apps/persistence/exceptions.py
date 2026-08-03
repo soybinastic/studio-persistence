@@ -27,3 +27,15 @@ class BannerMaterialNotFoundError(Exception):
 
 class TickerMaterialNotFoundError(Exception):
     pass
+
+
+class PlatformConnectionNotFoundError(Exception):
+    pass
+
+
+class OAuthStateError(Exception):
+    pass
+
+
+class PlatformIntegrationError(Exception):
+    pass

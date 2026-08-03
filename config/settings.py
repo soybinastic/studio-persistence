@@ -115,3 +115,12 @@ CORS_ALLOWED_ORIGINS = [
     if origin.strip()
 ]
 CORS_ALLOW_CREDENTIALS = True
+
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173')
+TWITCH_CLIENT_ID = os.getenv('TWITCH_CLIENT_ID', '')
+TWITCH_CLIENT_SECRET = os.getenv('TWITCH_CLIENT_SECRET', '')
+TWITCH_REDIRECT_URI = os.getenv(
+    'TWITCH_REDIRECT_URI',
+    'http://localhost:8001/api/persistence/oauth/twitch/callback/',
+)
+TOKEN_ENCRYPTION_KEY = os.getenv('TOKEN_ENCRYPTION_KEY', '')

@@ -88,6 +88,12 @@ Studio changes are dual-written to compositor (live session) and persistence (te
 | PATCH/DELETE | `/api/persistence/tenant/{tenant_id}/scenes/{scene_id}/` | Update or delete a scene |
 | GET/POST | `/api/persistence/tenant/{tenant_id}/destinations/` | List or create RTMP destinations |
 | PATCH/DELETE | `/api/persistence/tenant/{tenant_id}/destinations/{destination_id}/` | Update or delete a destination |
+| GET | `/api/persistence/tenant/{tenant_id}/platform-connections/` | List OAuth platform connections |
+| DELETE | `/api/persistence/tenant/{tenant_id}/platform-connections/{connection_id}/` | Remove connection + linked destination |
+| POST | `/api/persistence/tenant/{tenant_id}/platform-connections/{connection_id}/disconnect/` | Mark connection disconnected |
+| POST | `/api/persistence/tenant/{tenant_id}/platform-connections/{connection_id}/refresh/` | Refresh Twitch stream key |
+| GET | `/api/persistence/oauth/twitch/authorize/?tenant_id=&return_url=` | Start Twitch OAuth (returns `authorize_url`) |
+| GET | `/api/persistence/oauth/twitch/callback/` | Twitch OAuth callback (redirects to frontend) |
 | GET | `/api/persistence/tenant/{tenant_id}/assets/` | Studio media catalog (backgrounds, overlays, logos, etc.) |
 | GET | `/api/persistence/tenant/{tenant_id}/text-materials/` | Banner and ticker material catalog |
 | GET/POST | `/api/persistence/tenant/{tenant_id}/banners/` | List or create banner materials |

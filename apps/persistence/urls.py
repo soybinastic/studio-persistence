@@ -8,11 +8,19 @@ from apps.persistence.views import (
     TenantConfigurationView,
     TenantDestinationDetailView,
     TenantDestinationListCreateView,
+    TenantPlatformConnectionDetailView,
+    TenantPlatformConnectionDisconnectView,
+    TenantPlatformConnectionImportView,
+    TenantPlatformConnectionListView,
+    TenantPlatformConnectionRefreshView,
     TenantSceneDetailView,
     TenantSceneListCreateView,
     TenantTextMaterialCatalogView,
     TenantTickerMaterialDetailView,
     TenantTickerMaterialListCreateView,
+    TwitchAuthorizeView,
+    TwitchChatCredentialsView,
+    TwitchOAuthCallbackView,
 )
 
 urlpatterns = [
@@ -71,5 +79,45 @@ urlpatterns = [
         'tenant/<uuid:tenant_id>/tickers/<uuid:ticker_id>/',
         TenantTickerMaterialDetailView.as_view(),
         name='tenant-ticker-detail',
+    ),
+    path(
+        'tenant/<uuid:tenant_id>/platform-connections/import/',
+        TenantPlatformConnectionImportView.as_view(),
+        name='tenant-platform-connection-import',
+    ),
+    path(
+        'tenant/<uuid:tenant_id>/platform-connections/',
+        TenantPlatformConnectionListView.as_view(),
+        name='tenant-platform-connections',
+    ),
+    path(
+        'tenant/<uuid:tenant_id>/platform-connections/<uuid:connection_id>/',
+        TenantPlatformConnectionDetailView.as_view(),
+        name='tenant-platform-connection-detail',
+    ),
+    path(
+        'tenant/<uuid:tenant_id>/platform-connections/<uuid:connection_id>/disconnect/',
+        TenantPlatformConnectionDisconnectView.as_view(),
+        name='tenant-platform-connection-disconnect',
+    ),
+    path(
+        'tenant/<uuid:tenant_id>/platform-connections/<uuid:connection_id>/refresh/',
+        TenantPlatformConnectionRefreshView.as_view(),
+        name='tenant-platform-connection-refresh',
+    ),
+    path(
+        'tenant/<uuid:tenant_id>/integrations/twitch/chat-credentials/',
+        TwitchChatCredentialsView.as_view(),
+        name='twitch-chat-credentials',
+    ),
+    path(
+        'oauth/twitch/authorize/',
+        TwitchAuthorizeView.as_view(),
+        name='twitch-oauth-authorize',
+    ),
+    path(
+        'oauth/twitch/callback/',
+        TwitchOAuthCallbackView.as_view(),
+        name='twitch-oauth-callback',
     ),
 ]
