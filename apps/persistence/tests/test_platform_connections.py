@@ -43,7 +43,7 @@ def _mock_twitch_result() -> TwitchConnectionResult:
             access_token='access-token',
             refresh_token='refresh-token',
             expires_in=3600,
-            scope=['channel:read:stream_key', 'user:read:email', 'chat:read'],
+            scope=['channel:read:stream_key', 'user:read:email', 'chat:read', 'user:write:chat'],
             token_type='bearer',
         ),
         stream_key='live-stream-key',
