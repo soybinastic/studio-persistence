@@ -326,17 +326,26 @@ class PlatformConnectionService:
         connection_id: uuid.UUID,
     ) -> dict[str, Any]:
         connection = self.get_connection(tenant_id, connection_id)
-        if connection.platform not in (PlatformType.FACEBOOK, PlatformType.YOUTUBE):
+        if connection.platform not in (
+            PlatformType.FACEBOOK,
+            PlatformType.YOUTUBE,
+            PlatformType.TWITCH,
+        ):
             raise PlatformIntegrationError(
-                'Embed credentials are only supported for Facebook and YouTube',
-            )
-        if not connection.access_token_encrypted:
-            raise PlatformIntegrationError(
-                f'{connection.platform} connection is missing an access token',
+                'Embed credentials are only supported for Facebook, YouTube, and Twitch',
             )
 
+        if connection.platform == PlatformType.TWITCH:
+            access_token = self._ensure_valid_access_token(connection)
+        else:
+            if not connection.access_token_encrypted:
+                raise PlatformIntegrationError(
+                    f'{connection.platform} connection is missing an access token',
+                )
+            access_token = decrypt_secret(connection.access_token_encrypted)
+
         result: dict[str, Any] = {
-            'access_token': decrypt_secret(connection.access_token_encrypted),
+            'access_token': access_token,
             'platform_user_id': connection.platform_user_id,
             'platform_login': connection.platform_login,
             'name': connection.name,
