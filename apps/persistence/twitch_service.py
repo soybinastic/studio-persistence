@@ -13,7 +13,7 @@ TWITCH_AUTH_URL = 'https://id.twitch.tv/oauth2/authorize'
 TWITCH_TOKEN_URL = 'https://id.twitch.tv/oauth2/token'
 TWITCH_HELIX_BASE = 'https://api.twitch.tv/helix'
 TWITCH_RTMP_INGEST = 'rtmp://live.twitch.tv/app'
-DEFAULT_SCOPES = ('channel:read:stream_key', 'user:read:email', 'chat:read')
+DEFAULT_SCOPES = ('channel:read:stream_key', 'user:read:email', 'chat:read', 'user:write:chat')
 
 
 class TwitchIntegrationError(Exception):
