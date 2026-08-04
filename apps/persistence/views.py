@@ -612,7 +612,7 @@ class TwitchChatCredentialsView(APIView):
 
 
 class FacebookEmbedCredentialsView(APIView):
-    """Returns platform tokens for CMS embed go-live refresh (studio-frontend → CMS postMessage)."""
+    """Returns platform tokens for CMS embed go-live (Facebook, YouTube, Twitch)."""
 
     authentication_classes = []
     permission_classes = []

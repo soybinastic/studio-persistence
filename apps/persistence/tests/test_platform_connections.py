@@ -298,6 +298,38 @@ class PlatformConnectionTests(TestCase):
         self.assertEqual(credentials_response.data['platform_user_id'], 'channel-123')
         self.assertEqual(credentials_response.data['metadata']['channel_id'], 'channel-123')
 
+    def test_twitch_embed_credentials_endpoint(self):
+        import_response = self.client.post(
+            reverse('tenant-platform-connection-import', kwargs={'tenant_id': self.tenant_id}),
+            {
+                'platform': PlatformType.TWITCH,
+                'name': 'Streamer Pro',
+                'platform_login': 'streamer_pro',
+                'platform_user_id': '12345',
+                'access_token': 'twitch-access-token',
+                'refresh_token': 'twitch-refresh-token',
+                'stream_key': 'live-stream-key',
+                'rtmp_url': 'rtmp://live.twitch.tv/app',
+                'metadata': {'source': 'cms_embed'},
+            },
+            format='json',
+        )
+        self.assertEqual(import_response.status_code, status.HTTP_200_OK)
+        connection_id = import_response.data['connection_id']
+
+        credentials_response = self.client.get(
+            reverse(
+                'facebook-embed-credentials',
+                kwargs={'tenant_id': self.tenant_id, 'connection_id': connection_id},
+            ),
+        )
+        self.assertEqual(credentials_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(credentials_response.data['access_token'], 'twitch-access-token')
+        self.assertEqual(credentials_response.data['refresh_token'], 'twitch-refresh-token')
+        self.assertEqual(credentials_response.data['platform_user_id'], '12345')
+        self.assertEqual(credentials_response.data['platform_login'], 'streamer_pro')
+        self.assertEqual(credentials_response.data['metadata']['source'], 'cms_embed')
+
     def test_youtube_import_resolves_rtmp_url_from_stream_key(self):
         import_response = self.client.post(
             reverse('tenant-platform-connection-import', kwargs={'tenant_id': self.tenant_id}),
