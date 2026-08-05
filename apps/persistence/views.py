@@ -19,6 +19,8 @@ from apps.persistence.exceptions import (
 from apps.persistence.serializers import (
     CreateBannerMaterialSerializer,
     CreateDestinationSerializer,
+    CreateMediaAssetSerializer,
+    CreateMusicTrackSerializer,
     CreateSceneSerializer,
     CreateTickerMaterialSerializer,
     DestinationSerializer,
@@ -34,6 +36,7 @@ from apps.persistence.serializers import (
     TwitchAuthorizeQuerySerializer,
 )
 from apps.persistence.asset_service import AssetCatalogService
+from apps.persistence.music_service import MusicCatalogService
 from apps.persistence.platform_connection_service import PlatformConnectionService
 from apps.persistence.services import TenantService
 from apps.persistence.text_material_service import TextMaterialService
@@ -302,6 +305,68 @@ class TenantAssetCatalogView(APIView):
             return Response({'detail': 'Tenant not found'}, status=status.HTTP_404_NOT_FOUND)
 
         return Response(catalog)
+
+    def post(self, request, tenant_id):
+        serializer = CreateMediaAssetSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        try:
+            asset = AssetCatalogService().create_tenant_asset(
+                tenant_id,
+                asset_type=data['asset_type'],
+                source=data['source'],
+                thumbnail=data.get('thumbnail') or '',
+                size=data.get('size', 0),
+                media_format=data.get('media_format'),
+                label=data.get('label', ''),
+                meta_data=data.get('meta_data') or {},
+                sort_order=data.get('sort_order', 0),
+            )
+        except TenantNotFoundError:
+            return Response({'detail': 'Tenant not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response(
+            AssetCatalogService.serialize_asset(asset),
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class TenantMusicCatalogView(APIView):
+    """List / register tenant background music tracks."""
+
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request, tenant_id):
+        try:
+            catalog = MusicCatalogService().build_music_catalog(tenant_id)
+        except TenantNotFoundError:
+            return Response({'detail': 'Tenant not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response(catalog)
+
+    def post(self, request, tenant_id):
+        serializer = CreateMusicTrackSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        try:
+            track = MusicCatalogService().create_tenant_track(
+                tenant_id,
+                title=data['title'],
+                source=data['source'],
+                size=data.get('size', 0),
+                meta_data=data.get('meta_data') or {},
+                sort_order=data.get('sort_order', 0),
+            )
+        except TenantNotFoundError:
+            return Response({'detail': 'Tenant not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response(
+            MusicCatalogService.serialize_track(track),
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class TenantTextMaterialCatalogView(APIView):

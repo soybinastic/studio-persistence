@@ -14,10 +14,12 @@ from apps.persistence.constants import (
     DEFAULT_BACKGROUND_MUSIC_CONFIG,
     DEFAULT_DEVICES_CONFIG,
     DEFAULT_GRAPHICS_CONFIG,
+    DEFAULT_MUSIC_CATALOG,
     DEFAULT_SOURCES_CONFIG,
     DEFAULT_TEXT_MATERIAL_CATALOG,
     DEFAULT_TILE_ORDER_CONFIG,
 )
+from apps.persistence.music_service import MusicCatalogService
 from apps.persistence.text_material_service import TextMaterialService
 from apps.persistence.exceptions import (
     ActiveSceneDeleteError,
@@ -48,6 +50,7 @@ def _empty_configuration() -> dict[str, Any]:
         'platform_connections': [],
         'asset_catalog': copy.deepcopy(DEFAULT_ASSET_CATALOG),
         'text_material_catalog': copy.deepcopy(DEFAULT_TEXT_MATERIAL_CATALOG),
+        'music_catalog': copy.deepcopy(DEFAULT_MUSIC_CATALOG),
     }
 
 
@@ -130,6 +133,7 @@ class TenantService:
 
         asset_catalog = AssetCatalogService().build_asset_catalog(tenant.id)
         text_material_catalog = TextMaterialService().build_text_material_catalog(tenant.id)
+        music_catalog = MusicCatalogService().build_music_catalog(tenant.id)
 
         return {
             'layout': config.layout,
@@ -149,6 +153,7 @@ class TenantService:
             ],
             'asset_catalog': asset_catalog,
             'text_material_catalog': text_material_catalog,
+            'music_catalog': music_catalog,
         }
 
     def update_configuration(

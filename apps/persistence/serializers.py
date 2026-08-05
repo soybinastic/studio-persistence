@@ -186,6 +186,60 @@ class DestinationSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class CreateMediaAssetSerializer(serializers.Serializer):
+    asset_type = serializers.ChoiceField(choices=[1, 2, 4, 5, 6])
+    source = serializers.CharField(max_length=2048, trim_whitespace=True)
+    thumbnail = serializers.CharField(
+        max_length=2048,
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        default='',
+    )
+    size = serializers.IntegerField(min_value=0, required=False, default=0)
+    media_format = serializers.ChoiceField(
+        choices=['image', 'video'],
+        required=False,
+        allow_null=True,
+    )
+    label = serializers.CharField(
+        max_length=255,
+        required=False,
+        allow_blank=True,
+        default='',
+    )
+    meta_data = serializers.DictField(required=False, default=dict)
+    sort_order = serializers.IntegerField(min_value=0, required=False, default=0)
+
+    def validate_source(self, value: str) -> str:
+        if not value.strip():
+            raise serializers.ValidationError('source is required.')
+        return value.strip()
+
+    def validate_thumbnail(self, value: str | None) -> str:
+        if value is None:
+            return ''
+        return value.strip()
+
+
+class CreateMusicTrackSerializer(serializers.Serializer):
+    title = serializers.CharField(max_length=255, trim_whitespace=True)
+    source = serializers.CharField(max_length=2048, trim_whitespace=True)
+    size = serializers.IntegerField(min_value=0, required=False, default=0)
+    meta_data = serializers.DictField(required=False, default=dict)
+    sort_order = serializers.IntegerField(min_value=0, required=False, default=0)
+
+    def validate_source(self, value: str) -> str:
+        if not value.strip():
+            raise serializers.ValidationError('source is required.')
+        return value.strip()
+
+    def validate_title(self, value: str) -> str:
+        if not value.strip():
+            raise serializers.ValidationError('title is required.')
+        return value.strip()
+
+
 class CreateBannerMaterialSerializer(serializers.Serializer):
     label = serializers.CharField(max_length=255, required=False, allow_blank=True, default='')
     title = serializers.CharField(max_length=255, trim_whitespace=True)

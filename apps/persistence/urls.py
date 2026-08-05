@@ -8,6 +8,7 @@ from apps.persistence.views import (
     TenantConfigurationView,
     TenantDestinationDetailView,
     TenantDestinationListCreateView,
+    TenantMusicCatalogView,
     TenantPlatformConnectionDetailView,
     TenantPlatformConnectionDisconnectView,
     TenantPlatformConnectionImportView,
@@ -55,6 +56,11 @@ urlpatterns = [
         'tenant/<uuid:tenant_id>/assets/',
         TenantAssetCatalogView.as_view(),
         name='tenant-assets',
+    ),
+    path(
+        'tenant/<uuid:tenant_id>/music/',
+        TenantMusicCatalogView.as_view(),
+        name='tenant-music',
     ),
     path(
         'tenant/<uuid:tenant_id>/text-materials/',

@@ -261,6 +261,45 @@ class StudioMediaAsset(models.Model):
         return f'{scope}:{self.asset_type}:{self.id}'
 
 
+class TenantMusicTrack(models.Model):
+    """
+    Background music track available to a tenant (custom uploads or system defaults).
+
+    tenant=NULL rows are system defaults available to every tenant.
+    tenant=<uuid> rows are tenant-owned CMS-uploaded tracks.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenant = models.ForeignKey(
+        Tenant,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='music_tracks',
+    )
+    title = models.CharField(max_length=255)
+    source = models.CharField(max_length=2048)
+    size = models.BigIntegerField(default=0)
+    is_system_default = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+    meta_data = models.JSONField(default=dict, blank=True)
+    sort_order = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'tenant_music_tracks'
+        ordering = ['sort_order', 'created_at']
+        indexes = [
+            models.Index(fields=['tenant', 'is_active']),
+            models.Index(fields=['is_system_default']),
+        ]
+
+    def __str__(self) -> str:
+        scope = 'system' if self.tenant_id is None else str(self.tenant_id)
+        return f'{scope}:music:{self.title or self.id}'
+
+
 class TenantBannerMaterial(models.Model):
     """
     Saved banner lower-third template for a tenant graphics panel.
