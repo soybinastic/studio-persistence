@@ -124,6 +124,55 @@ class AssetCatalogTests(TestCase):
 
         self.assertEqual(response.data['logos'], [])
 
+    def test_create_tenant_media_asset(self):
+        response = self.client.post(
+            reverse('tenant-assets', kwargs={'tenant_id': self.tenant_id}),
+            {
+                'asset_type': ASSET_TYPE_LOGO,
+                'source': 'https://studio-assets.b-cdn.net/logo/uploaded.png',
+                'thumbnail': '',
+                'size': 2048,
+                'media_format': MEDIA_FORMAT_IMAGE,
+                'label': 'Uploaded logo',
+                'meta_data': {'cms_material_uuid': 'abc-123'},
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['source'], 'https://studio-assets.b-cdn.net/logo/uploaded.png')
+        self.assertEqual(response.data['label'], 'Uploaded logo')
+        self.assertEqual(response.data['asset_type'], ASSET_TYPE_LOGO)
+        self.assertFalse(response.data['is_system_default'])
+        self.assertEqual(response.data['meta_data']['cms_material_uuid'], 'abc-123')
+        self.assertEqual(str(response.data['tenant_id']), str(self.tenant_id))
+
+        catalog = self.client.get(
+            reverse('tenant-assets', kwargs={'tenant_id': self.tenant_id}),
+        )
+        self.assertEqual(len(catalog.data['logos']), 1)
+        self.assertEqual(catalog.data['logos'][0]['asset_id'], response.data['asset_id'])
+
+    def test_create_background_video_asset_uses_video_bucket(self):
+        response = self.client.post(
+            reverse('tenant-assets', kwargs={'tenant_id': self.tenant_id}),
+            {
+                'asset_type': ASSET_TYPE_BACKGROUND,
+                'source': 'https://studio-assets.b-cdn.net/abg/clip.mp4',
+                'size': 4096,
+                'media_format': MEDIA_FORMAT_VIDEO,
+                'label': 'Clip',
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        catalog = self.client.get(
+            reverse('tenant-assets', kwargs={'tenant_id': self.tenant_id}),
+        )
+        self.assertEqual(len(catalog.data['background_videos']), 1)
+        self.assertEqual(len(catalog.data['backgrounds']), 0)
+
 
 class SeedStudioAssetsCommandTests(TestCase):
     def test_seed_studio_assets_loads_defaults(self):

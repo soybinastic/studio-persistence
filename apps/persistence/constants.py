@@ -111,3 +111,5 @@ DEFAULT_TEXT_MATERIAL_CATALOG: dict = {
     'banners': [],
     'tickers': [],
 }
+
+DEFAULT_MUSIC_CATALOG: list = []

@@ -7,6 +7,7 @@ from apps.persistence.models import (
     TenantBannerMaterial,
     TenantConfiguration,
     TenantDestination,
+    TenantMusicTrack,
     TenantScene,
     TenantTickerMaterial,
 )
@@ -48,6 +49,20 @@ class StudioMediaAssetAdmin(admin.ModelAdmin):
     )
     list_filter = ('asset_type', 'media_format', 'is_system_default', 'is_active')
     search_fields = ('id', 'label', 'source')
+
+
+@admin.register(TenantMusicTrack)
+class TenantMusicTrackAdmin(admin.ModelAdmin):
+    list_display = (
+        'title',
+        'tenant',
+        'is_system_default',
+        'is_active',
+        'sort_order',
+        'updated_at',
+    )
+    list_filter = ('is_system_default', 'is_active')
+    search_fields = ('title', 'source', 'id')
 
 
 @admin.register(TenantBannerMaterial)
