@@ -1,5 +1,6 @@
 import uuid
 
+from django.core.management import call_command
 from django.test import TestCase
 from django.urls import reverse
 from rest_framework import status
@@ -70,3 +71,39 @@ class MusicCatalogTests(TestCase):
             reverse('tenant-music', kwargs={'tenant_id': self.tenant_id}),
         )
         self.assertEqual(response.data, [])
+
+    def test_system_defaults_appear_in_catalog_for_all_tenants(self):
+        system_id = uuid.uuid4()
+        TenantMusicTrack.objects.create(
+            id=system_id,
+            tenant=None,
+            title='Twilight Drift',
+            source='https://studio-assets.b-cdn.net/bgm/twilight_drift.mp3',
+            is_system_default=True,
+            is_active=True,
+        )
+
+        response = self.client.get(
+            reverse('tenant-music', kwargs={'tenant_id': self.tenant_id}),
+        )
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]['track_id'], str(system_id))
+        self.assertTrue(response.data[0]['is_system_default'])
+        self.assertIsNone(response.data[0]['tenant_id'])
+
+
+class SeedStudioMusicCommandTests(TestCase):
+    def test_seed_studio_music_loads_defaults(self):
+        call_command('seed_studio_music')
+
+        tracks = TenantMusicTrack.objects.filter(tenant__isnull=True, is_system_default=True)
+        self.assertEqual(tracks.count(), 10)
+        self.assertTrue(tracks.filter(title='Twilight Drift').exists())
+
+    def test_seed_is_idempotent(self):
+        call_command('seed_studio_music')
+        call_command('seed_studio_music')
+        self.assertEqual(
+            TenantMusicTrack.objects.filter(tenant__isnull=True, is_system_default=True).count(),
+            10,
+        )
