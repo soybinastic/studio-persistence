@@ -77,15 +77,40 @@ def _merge_sources_config(
     partial: dict[str, Any],
 ) -> dict[str, Any]:
     merged = copy.deepcopy(current or DEFAULT_SOURCES_CONFIG)
+    if 'items' not in merged:
+        merged['items'] = []
     if 'assignments' in partial:
         assignments = dict(merged.get('assignments') or {})
-        assignments.update(partial['assignments'])
+        assignments.update(partial['assignments'] or {})
         merged['assignments'] = assignments
     for key, value in partial.items():
         if key == 'assignments':
             continue
         merged[key] = value
+    if 'items' in partial and isinstance(partial['items'], list):
+        merged['version'] = max(int(merged.get('version') or 1), 2)
+        if 'assignments' not in partial:
+            merged['assignments'] = _assignments_from_scene_items(partial['items'])
     return merged
+
+
+def _assignments_from_scene_items(items: list) -> dict[str, str]:
+    ordered: list[tuple[int, str]] = []
+    for raw in items:
+        if not isinstance(raw, dict):
+            continue
+        if raw.get('visible', True) is False:
+            continue
+        source_id = raw.get('sourceId') or raw.get('source_id')
+        if not source_id:
+            continue
+        try:
+            z_index = int(raw.get('zIndex', raw.get('z_index', 0)))
+        except (TypeError, ValueError):
+            z_index = 0
+        ordered.append((z_index, str(source_id)))
+    ordered.sort(key=lambda pair: pair[0])
+    return {str(index): source_id for index, (_z, source_id) in enumerate(ordered)}
 
 
 class TenantService:
