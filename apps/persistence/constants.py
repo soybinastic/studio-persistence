@@ -10,6 +10,8 @@ GRAPHICS_LAYERS = (
     'chat',
 )
 
+# Scene-level `fonts` is stored inside graphics_config when the host selects a family;
+# it is not seeded here so unset scenes keep compositor legacy burn-in.
 DEFAULT_GRAPHICS_CONFIG: dict = {layer: None for layer in GRAPHICS_LAYERS}
 
 DEFAULT_DEVICES_CONFIG: dict = {
@@ -21,7 +23,8 @@ DEFAULT_DEVICES_CONFIG: dict = {
 }
 
 DEFAULT_SOURCES_CONFIG: dict = {
-    'version': 1,
+    'version': 2,
+    'items': [],
     'sources': [],
     'assignments': {},
 }

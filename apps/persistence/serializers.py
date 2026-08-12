@@ -30,8 +30,17 @@ class DevicesConfigSerializer(serializers.Serializer):
     speakerId = serializers.CharField(required=False, allow_null=True, default=None)
 
 
+class SceneItemSerializer(serializers.Serializer):
+    id = serializers.CharField(max_length=64)
+    sceneId = serializers.CharField(max_length=64, required=False, allow_blank=True, default='')
+    sourceId = serializers.CharField(max_length=64)
+    visible = serializers.BooleanField(default=True)
+    zIndex = serializers.IntegerField(default=0)
+
+
 class SourcesConfigSerializer(serializers.Serializer):
-    version = serializers.IntegerField(required=False, default=1)
+    version = serializers.IntegerField(required=False, default=2)
+    items = SceneItemSerializer(many=True, required=False)
     sources = serializers.ListField(required=False, default=list)
     assignments = serializers.DictField(
         child=serializers.CharField(),
